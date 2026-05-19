@@ -323,7 +323,7 @@ layout = go.Layout(
     legend=dict(
         x=0.99, y=0.99, xanchor="right", yanchor="top",
         bgcolor="rgba(255,255,255,0.9)", bordercolor="#ccc", borderwidth=1,
-        font=dict(size=9), tracegroupgap=4,
+        font=dict(size=9, color="#222"), tracegroupgap=4,
     ),
     hovermode="closest",
     plot_bgcolor="white", paper_bgcolor="white",
