@@ -50,11 +50,11 @@ COLOR_A = "#1f77b4"
 COLOR_B = "#d62728"
 
 # ── Maths ──────────────────────────────────────────────────────────────────────
-def speed_kmh(rpm, gear_ratio, diff_ratio):
-    return (rpm / (gear_ratio * diff_ratio)) * CIRC * 60 / 1000
+def speed_kmh(rpm, gear_ratio, diff_ratio, circ):
+    return (rpm / (gear_ratio * diff_ratio)) * circ * 60 / 1000
 
-def rpm_at_speed(spd_kmh, gear_ratio, diff_ratio):
-    return (spd_kmh * 1000 / (CIRC * 60)) * gear_ratio * diff_ratio
+def rpm_at_speed(spd_kmh, gear_ratio, diff_ratio, circ):
+    return (spd_kmh * 1000 / (circ * 60)) * gear_ratio * diff_ratio
 
 def engine_torque(rpm):
     return float(np.interp(rpm, _TQ_RPMS, _TQ_VALS))
@@ -69,7 +69,7 @@ def entry_rpm_after_skip(ratios, shift_rpm, start_idx):
     return rpm
 
 # ── Trace builders ─────────────────────────────────────────────────────────────
-def sawtooth_traces(gb, diff, color, dash, line_w, label, start_idx,
+def sawtooth_traces(gb, diff, circ, color, dash, line_w, label, start_idx,
                      shift_rpm, show_labels):
     ratios = list(gb["ratios"].values())
     gears  = list(gb["ratios"].keys())
@@ -83,8 +83,8 @@ def sawtooth_traces(gb, diff, color, dash, line_w, label, start_idx,
         gear  = gears[i]
         ratio = ratios[i]
 
-        spd_entry = speed_kmh(entry_rpm, ratio, diff)
-        spd_shift = speed_kmh(shift_rpm,  ratio, diff)
+        spd_entry = speed_kmh(entry_rpm, ratio, diff, circ)
+        spd_shift = speed_kmh(shift_rpm,  ratio, diff, circ)
 
         # Faint origin extension
         traces.append(go.Scatter(
@@ -131,7 +131,7 @@ def sawtooth_traces(gb, diff, color, dash, line_w, label, start_idx,
     return traces, annotations
 
 
-def torque_traces(gb, diff, color, start_idx, shift_rpm, line_w, alpha, fill_alpha):
+def torque_traces(gb, diff, circ, color, start_idx, shift_rpm, line_w, alpha, fill_alpha):
     ratios = list(gb["ratios"].values())
     N = 120
     traces = []
@@ -142,7 +142,7 @@ def torque_traces(gb, diff, color, start_idx, shift_rpm, line_w, alpha, fill_alp
     for i in range(start_idx, len(ratios)):
         ratio = ratios[i]
         rpm_pts = np.linspace(entry_rpm, shift_rpm, N)
-        spd_pts = [speed_kmh(r, ratio, diff) for r in rpm_pts]
+        spd_pts = [speed_kmh(r, ratio, diff, circ) for r in rpm_pts]
         wt_pts  = [wheel_torque(r, ratio, diff) for r in rpm_pts]
 
         # Filled polygon per gear
@@ -181,13 +181,13 @@ def torque_traces(gb, diff, color, start_idx, shift_rpm, line_w, alpha, fill_alp
 
 
 # ── Stats ──────────────────────────────────────────────────────────────────────
-def stats_rows(gb, diff):
+def stats_rows(gb, diff, circ):
     ratios = list(gb["ratios"].values())
     gears  = list(gb["ratios"].keys())
     n = len(ratios)
-    top_spd = speed_kmh(RPM_REDLINE, ratios[-1], diff)
-    rpm100  = rpm_at_speed(100, ratios[-1], diff)
-    rpm110  = rpm_at_speed(110, ratios[-1], diff)
+    top_spd = speed_kmh(RPM_REDLINE, ratios[-1], diff, circ)
+    rpm100  = rpm_at_speed(100, ratios[-1], diff, circ)
+    rpm110  = rpm_at_speed(110, ratios[-1], diff, circ)
     return [
         ("Top gear",                    gears[-1]),
         ("Top speed",                   f"{top_spd:.1f} km/h  ({top_spd/1.609:.1f} mph)"),
@@ -209,15 +209,23 @@ col_a, col_b, col_cfg = st.columns([2, 2, 1.4])
 
 with col_a:
     st.markdown("**🔵 Combo A — solid lines**")
-    gb_a_key  = st.selectbox("Gearbox", gb_names, index=0, key="gb_a")
+    gb_a_key   = st.selectbox("Gearbox", gb_names, index=0, key="gb_a")
     diff_a_key = st.selectbox("Differential ratio", diff_keys, index=4, key="diff_a")
-    skip1_a   = st.checkbox("Skip 1st gear", value=(gb_a_key == "ZF 8HP50 8-Speed"), key="sk_a")
+    skip1_a    = st.checkbox("Skip 1st gear", value=(gb_a_key == "ZF 8HP50 8-Speed"), key="sk_a")
+    st.markdown("**Tyre**")
+    tw_a = st.selectbox("Width (mm)",    [195, 205, 215, 225, 235], index=1, key="tw_a")
+    tp_a = st.selectbox("Profile (%)",   [35, 40, 45, 50, 55, 60],  index=3, key="tp_a")
+    tr_a = st.selectbox('Rim (inches)"', [15, 16, 17, 18],          index=0, key="tr_a")
 
 with col_b:
     st.markdown("**🔴 Combo B — dashed lines**")
-    gb_b_key  = st.selectbox("Gearbox", gb_names, index=1, key="gb_b")
+    gb_b_key   = st.selectbox("Gearbox", gb_names, index=1, key="gb_b")
     diff_b_key = st.selectbox("Differential ratio", diff_keys, index=4, key="diff_b")
-    skip1_b   = st.checkbox("Skip 1st gear", value=(gb_b_key == "ZF 8HP50 8-Speed"), key="sk_b")
+    skip1_b    = st.checkbox("Skip 1st gear", value=(gb_b_key == "ZF 8HP50 8-Speed"), key="sk_b")
+    st.markdown("**Tyre**")
+    tw_b = st.selectbox("Width (mm)",    [195, 205, 215, 225, 235], index=1, key="tw_b")
+    tp_b = st.selectbox("Profile (%)",   [35, 40, 45, 50, 55, 60],  index=3, key="tp_b")
+    tr_b = st.selectbox('Rim (inches)"', [15, 16, 17, 18],          index=0, key="tr_b")
 
 with col_cfg:
     st.markdown("**Chart settings**")
@@ -226,18 +234,16 @@ with col_cfg:
     show_pb     = st.checkbox("Powerband", value=True)
     show_torque = st.checkbox("Wheel Torque", value=True)
     show_labels = st.checkbox("Gear Labels", value=True)
-    st.divider()
-    st.markdown("**Tyre size**")
-    tyre_width   = st.selectbox("Width (mm)",     [195, 205, 215, 225, 235], index=1, key="tw")
-    tyre_profile = st.selectbox("Profile (%)",    [35, 40, 45, 50, 55, 60],  index=3, key="tp")
-    tyre_rim     = st.selectbox('Rim (inches)"',  [15, 16, 17, 18],          index=0, key="tr")
 
-_sidewall  = tyre_width * (tyre_profile / 100)
-_diam_mm   = tyre_rim * 25.4 + 2 * _sidewall
-CIRC       = np.pi * _diam_mm / 1000
+def _circ(width, profile, rim):
+    return np.pi * (rim * 25.4 + 2 * width * (profile / 100)) / 1000
 
-tyre_label = f"{tyre_width}/{tyre_profile}R{tyre_rim}"
-caption_ph.caption(f"Tyre: {tyre_label}  |  Redline: 7,500 rpm  |  Drivetrain efficiency: 95%")
+circ_a = _circ(tw_a, tp_a, tr_a)
+circ_b = _circ(tw_b, tp_b, tr_b)
+
+tyre_label_a = f"{tw_a}/{tp_a}R{tr_a}"
+tyre_label_b = f"{tw_b}/{tp_b}R{tr_b}"
+caption_ph.caption(f"Redline: 7,500 rpm  |  Drivetrain efficiency: 95%  |  A tyre: {tyre_label_a}  |  B tyre: {tyre_label_b}")
 
 # ── Build figure ───────────────────────────────────────────────────────────────
 gb_a   = GEARBOXES[gb_a_key]
@@ -250,15 +256,15 @@ idx_b  = 1 if skip1_b else 0
 label_a = f"A · {gb_a['short']}"
 label_b = f"B · {gb_b['short']}"
 
-traces_a, ann_a = sawtooth_traces(gb_a, diff_a, COLOR_A, "solid", 2.8, label_a, idx_a, shift_rpm, show_labels)
-traces_b, ann_b = sawtooth_traces(gb_b, diff_b, COLOR_B, "dash",  2.0, label_b, idx_b, shift_rpm, show_labels)
+traces_a, ann_a = sawtooth_traces(gb_a, diff_a, circ_a, COLOR_A, "solid", 2.8, label_a, idx_a, shift_rpm, show_labels)
+traces_b, ann_b = sawtooth_traces(gb_b, diff_b, circ_b, COLOR_B, "dash",  2.0, label_b, idx_b, shift_rpm, show_labels)
 
 all_traces = traces_a + traces_b
 annotations = ann_a + ann_b
 
 if show_torque:
-    all_traces += torque_traces(gb_a, diff_a, COLOR_A, idx_a, shift_rpm, 2.0, 0.85, 0.08)
-    all_traces += torque_traces(gb_b, diff_b, COLOR_B, idx_b, shift_rpm, 1.4, 0.60, 0.04)
+    all_traces += torque_traces(gb_a, diff_a, circ_a, COLOR_A, idx_a, shift_rpm, 2.0, 0.85, 0.08)
+    all_traces += torque_traces(gb_b, diff_b, circ_b, COLOR_B, idx_b, shift_rpm, 1.4, 0.60, 0.04)
 
 # Phantom legend entries
 all_traces += [
@@ -307,10 +313,9 @@ layout = go.Layout(
     title=dict(
         text=(f"<b>Sawtooth Shift Diagram</b><br>"
               f"<span style='font-size:11px;color:#555'>"
-              f"A: {gb_a_key} | diff {diff_a_key}"
+              f"A: {gb_a_key} | diff {diff_a_key} | {tyre_label_a}"
               f"&nbsp;&nbsp;vs&nbsp;&nbsp;"
-              f"B: {gb_b_key} | diff {diff_b_key}"
-              f"&nbsp;&nbsp;|&nbsp;&nbsp;Tyre: {tyre_label}</span>"),
+              f"B: {gb_b_key} | diff {diff_b_key} | {tyre_label_b}</span>"),
         font=dict(size=15), y=0.99, yanchor="top",
     ),
     xaxis=dict(
@@ -348,15 +353,15 @@ st.divider()
 sc_a, sc_b = st.columns(2)
 
 with sc_a:
-    st.markdown(f"**🔵 Combo A — {gb_a['short']} · diff {diff_a_key}**")
+    st.markdown(f"**🔵 Combo A — {gb_a['short']} · diff {diff_a_key} · {tyre_label_a}**")
     st.dataframe(
-        pd.DataFrame(stats_rows(gb_a, diff_a), columns=["", "Value"]).set_index(""),
+        pd.DataFrame(stats_rows(gb_a, diff_a, circ_a), columns=["", "Value"]).set_index(""),
         use_container_width=True)
 
 with sc_b:
-    st.markdown(f"**🔴 Combo B — {gb_b['short']} · diff {diff_b_key}**")
+    st.markdown(f"**🔴 Combo B — {gb_b['short']} · diff {diff_b_key} · {tyre_label_b}**")
     st.dataframe(
-        pd.DataFrame(stats_rows(gb_b, diff_b), columns=["", "Value"]).set_index(""),
+        pd.DataFrame(stats_rows(gb_b, diff_b, circ_b), columns=["", "Value"]).set_index(""),
         use_container_width=True)
 
 st.caption("Double-click chart to reset zoom  |  Hover for values  |  Drag to zoom")
