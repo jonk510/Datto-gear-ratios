@@ -16,10 +16,6 @@ RPM_PB_HIGH    = 7500
 DRIVETRAIN_EFF = 0.95
 START_RPM      = 1500
 
-# Tyre 205/50R15
-_sidewall  = 205 * 0.50
-_diam_mm   = 15 * 25.4 + 2 * _sidewall
-CIRC       = np.pi * _diam_mm / 1000   # metres
 
 DIFF_RATIOS = {
     "3.540:1": 3.540, "3.700:1": 3.700, "3.900:1": 3.900,
@@ -204,7 +200,7 @@ def stats_rows(gb, diff):
 
 # ── UI ─────────────────────────────────────────────────────────────────────────
 st.title("Gearbox Sawtooth Comparison")
-st.caption("Tyre: 205/50R15  |  Redline: 7,500 rpm  |  Drivetrain efficiency: 95%")
+caption_ph = st.empty()
 
 gb_names = list(GEARBOXES.keys())
 diff_keys = list(DIFF_RATIOS.keys())
@@ -230,6 +226,18 @@ with col_cfg:
     show_pb     = st.checkbox("Powerband", value=True)
     show_torque = st.checkbox("Wheel Torque", value=True)
     show_labels = st.checkbox("Gear Labels", value=True)
+    st.divider()
+    st.markdown("**Tyre size**")
+    tyre_width   = st.selectbox("Width (mm)",     [195, 205, 215, 225, 235], index=1, key="tw")
+    tyre_profile = st.selectbox("Profile (%)",    [35, 40, 45, 50, 55, 60],  index=3, key="tp")
+    tyre_rim     = st.selectbox('Rim (inches)"',  [15, 16, 17, 18],          index=0, key="tr")
+
+_sidewall  = tyre_width * (tyre_profile / 100)
+_diam_mm   = tyre_rim * 25.4 + 2 * _sidewall
+CIRC       = np.pi * _diam_mm / 1000
+
+tyre_label = f"{tyre_width}/{tyre_profile}R{tyre_rim}"
+caption_ph.caption(f"Tyre: {tyre_label}  |  Redline: 7,500 rpm  |  Drivetrain efficiency: 95%")
 
 # ── Build figure ───────────────────────────────────────────────────────────────
 gb_a   = GEARBOXES[gb_a_key]
@@ -301,7 +309,8 @@ layout = go.Layout(
               f"<span style='font-size:11px;color:#555'>"
               f"A: {gb_a_key} | diff {diff_a_key}"
               f"&nbsp;&nbsp;vs&nbsp;&nbsp;"
-              f"B: {gb_b_key} | diff {diff_b_key}</span>"),
+              f"B: {gb_b_key} | diff {diff_b_key}"
+              f"&nbsp;&nbsp;|&nbsp;&nbsp;Tyre: {tyre_label}</span>"),
         font=dict(size=15), y=0.99, yanchor="top",
     ),
     xaxis=dict(
